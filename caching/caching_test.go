@@ -3,8 +3,15 @@ package caching
 import (
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
+
+type testCase[T any] struct {
+	name string
+	arg  int
+	want T
+}
 
 // TestCacheWrapper tests the non-thread-safe caching wrapper.
 func TestCacheWrapper(t *testing.T) {
@@ -20,11 +27,7 @@ func TestCacheWrapper(t *testing.T) {
 
 	cachedFactorial := CacheWrapper(factorial)
 
-	tests := []struct {
-		name string
-		arg  int
-		want *big.Int
-	}{
+	tests := []testCase[*big.Int]{
 		{
 			name: "success - calculate factorial of 5",
 			arg:  5,
@@ -59,11 +62,7 @@ func TestSafeCacheWrapper(t *testing.T) {
 
 	cachedDouble := SafeCacheWrapper(double)
 
-	tests := []struct {
-		name string
-		arg  int
-		want int
-	}{
+	tests := []testCase[int]{
 		{
 			name: "success - double 4",
 			arg:  4,
@@ -82,6 +81,8 @@ func TestSafeCacheWrapper(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := cachedDouble(tt.arg); got != tt.want {
 				t.Errorf("SafeCacheWrapper() = %v, want %v", got, tt.want)
 			}
@@ -99,12 +100,12 @@ func TestSafeCacheWrapperConcurrency(t *testing.T) {
 	cachedSquare := SafeCacheWrapper(square)
 	var wg sync.WaitGroup
 
-	const routines = 10
-
 	// Test concurrency with multiple goroutines.
-	results := make([]int, routines)
-	wg.Add(routines)
-	for i := range routines {
+	const numRoutines = 10
+
+	results := make([]int, numRoutines)
+	wg.Add(numRoutines)
+	for i := range numRoutines {
 		go func(idx int) {
 			defer wg.Done()
 			results[idx] = cachedSquare(4) // All goroutines calculate square of 4.
