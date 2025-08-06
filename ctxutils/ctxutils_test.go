@@ -83,7 +83,7 @@ func BenchmarkSettingAndGettingStringKey(b *testing.B) {
 
 	key := ContextKeyString{Key: "id"}
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		ctx = SetStringValue(ctx, key, fmt.Sprintf("value-%d", i))
 		_, _ = GetStringValue(ctx, key)
 	}
@@ -97,7 +97,7 @@ func BenchmarkSettingAndGettingIntKey(b *testing.B) {
 
 	key := ContextKeyInt{Key: 0}
 
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		ctx = SetIntValue(ctx, key, i)
 		_, _ = GetIntValue(ctx, key)
 	}
