@@ -90,29 +90,25 @@ func RandomAddress() (string, error) {
 		return "", err
 	}
 
-	idx, err := rnd.NumberInRange(0, int64(len(streetNames)-1))
+	streetName, err := rnd.Pick(streetNames)
 	if err != nil {
 		return "", err
 	}
-	streetName := streetNames[idx]
 
-	idx, err = rnd.NumberInRange(0, int64(len(streetNames)-1))
+	city, err := rnd.Pick(cities)
 	if err != nil {
 		return "", err
 	}
-	city := cities[idx]
 
-	idx, err = rnd.NumberInRange(0, int64(len(states)-1))
+	state, err := rnd.Pick(states)
 	if err != nil {
 		return "", err
 	}
-	state := states[idx]
 
-	idx, err = rnd.NumberInRange(0, int64(len(postalCodes)-1))
+	postalCode, err := rnd.Pick(postalCodes)
 	if err != nil {
 		return "", err
 	}
-	postalCode := postalCodes[idx]
 
 	return fmt.Sprintf("%d %s, %s, %s %s, USA", streetNumber, streetName, city, state, postalCode), nil
 }

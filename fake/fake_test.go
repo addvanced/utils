@@ -3,14 +3,17 @@ package fake
 import (
 	"fmt"
 	"regexp"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestGenerateUUID(t *testing.T) {
-	uuidSet := make(map[string]struct{})
-	for i := 0; i < 1000; i++ {
+	var uuidSet sync.Map
+	for i := range 1000 {
 		t.Run(fmt.Sprintf("UUIDTest-%d", i), func(t *testing.T) {
+			t.Parallel()
+
 			uuid, err := RandomUUID()
 			if err != nil {
 				t.Fatalf("Expected no error, got %v", err)
@@ -28,10 +31,10 @@ func TestGenerateUUID(t *testing.T) {
 			}
 
 			// Test for uniqueness
-			if _, exists := uuidSet[uuid]; exists {
+			if _, exists := uuidSet.Load(uuid); exists {
 				t.Errorf("Duplicate UUID found: %s", uuid)
 			}
-			uuidSet[uuid] = struct{}{}
+			uuidSet.Store(uuid, struct{}{})
 		})
 	}
 }
@@ -81,25 +84,29 @@ func TestRandomAddress(t *testing.T) {
 // ================================================================================
 
 func BenchmarkGenerateUUID(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.ReportAllocs()
+	for range b.N {
 		_, _ = RandomUUID()
 	}
 }
 
 func BenchmarkRandomDate(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.ReportAllocs()
+	for range b.N {
 		_, _ = RandomDate()
 	}
 }
 
 func BenchmarkRandomPhoneNumber(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.ReportAllocs()
+	for range b.N {
 		_, _ = RandomPhoneNumber()
 	}
 }
 
 func BenchmarkRandomAddress(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	b.ReportAllocs()
+	for range b.N {
 		_, _ = RandomAddress()
 	}
 }
