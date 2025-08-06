@@ -6,6 +6,12 @@ import (
 	"testing"
 )
 
+type testCase[T any] struct {
+	name string
+	arg  int
+	want T
+}
+
 // TestCacheWrapper tests the non-thread-safe caching wrapper.
 func TestCacheWrapper(t *testing.T) {
 	// Example function: Calculate factorial of a number.
@@ -20,11 +26,7 @@ func TestCacheWrapper(t *testing.T) {
 
 	cachedFactorial := CacheWrapper(factorial)
 
-	tests := []struct {
-		name string
-		arg  int
-		want *big.Int
-	}{
+	tests := []testCase[*big.Int]{
 		{
 			name: "success - calculate factorial of 5",
 			arg:  5,
@@ -59,11 +61,7 @@ func TestSafeCacheWrapper(t *testing.T) {
 
 	cachedDouble := SafeCacheWrapper(double)
 
-	tests := []struct {
-		name string
-		arg  int
-		want int
-	}{
+	tests := []testCase[int]{
 		{
 			name: "success - double 4",
 			arg:  4,
@@ -82,6 +80,8 @@ func TestSafeCacheWrapper(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			if got := cachedDouble(tt.arg); got != tt.want {
 				t.Errorf("SafeCacheWrapper() = %v, want %v", got, tt.want)
 			}
@@ -100,9 +100,11 @@ func TestSafeCacheWrapperConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Test concurrency with multiple goroutines.
-	results := make([]int, 10)
-	wg.Add(10)
-	for i := 0; i < 10; i++ {
+	const numRoutines = 10
+
+	results := make([]int, numRoutines)
+	wg.Add(numRoutines)
+	for i := range numRoutines {
 		go func(idx int) {
 			defer wg.Done()
 			results[idx] = cachedSquare(4) // All goroutines calculate square of 4.
@@ -122,6 +124,8 @@ func TestSafeCacheWrapperConcurrency(t *testing.T) {
 // ### BENCHMARKS
 // ================================================================================
 
+var benchSink int64
+
 func fib(n int) int {
 	if n <= 1 {
 		return n
@@ -136,40 +140,71 @@ func fib(n int) int {
 
 func BenchmarkFib(b *testing.B) {
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = fib(30)
+	var f int
+	for range b.N {
+		f = fib(30)
 	}
+	b.StopTimer()
+	benchSink = int64(f)
 }
 
 func BenchmarkCachedFib(b *testing.B) {
 	cachedFib := CacheWrapper(fib)
 
+	// warm the cache outside timing
+	_ = cachedFib(30)
+
 	b.ReportAllocs()
+	var f int
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = cachedFib(30)
+
+	for range b.N {
+		f = cachedFib(30)
 	}
+
+	b.StopTimer()
+	benchSink = int64(f)
 }
 
 func BenchmarkSafeCachedFib(b *testing.B) {
 	cachedFib := SafeCacheWrapper(fib)
 
+	// warm the cache outside timing
+	_ = cachedFib(30)
+
 	b.ReportAllocs()
+	var f int
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = cachedFib(30)
+	for range b.N {
+		f = cachedFib(30)
 	}
+	b.StopTimer()
+	benchSink = int64(f)
 }
 
 func BenchmarkConcurrentSafeCachedFib(b *testing.B) {
 	cachedFib := SafeCacheWrapper(fib)
+	_ = cachedFib(30)
 
 	b.ReportAllocs()
 	b.ResetTimer()
+
+	var locals sync.Map
 	b.RunParallel(func(pb *testing.PB) {
+		var local int
 		for pb.Next() {
-			_ = cachedFib(30)
+			local += cachedFib(30)
 		}
+		b.StopTimer()
+		locals.Store(pb, local)
+		b.StartTimer()
 	})
+
+	b.StopTimer()
+	var total int64
+	locals.Range(func(_, v any) bool {
+		total += int64(v.(int))
+		return true
+	})
+	benchSink = total
 }
