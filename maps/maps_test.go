@@ -112,23 +112,34 @@ func TestMetadata_Update(t *testing.T) {
 	}{
 		{
 			name: "success - update key and value",
-			m:    map[string]string{"key1": "value2"},
+			m:    Metadata{map[string]string{"key1": "value2"}},
 			args: args{key: "key1", value: "value1"},
 		},
 		{
 			name: "success - add a new key and value",
-			m:    map[string]string{"key1": "value2"},
+			m:    Metadata{map[string]string{"key1": "value2"}},
 			args: args{key: "key2", value: "value1"},
 		},
 		{
 			name: "success - update key and value with nil map",
-			m:    nil,
+			m:    Metadata{},
 			args: args{key: "key1", value: "value1"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Get value before updating
+			before := tt.m.Value(tt.args.key)
+
+			// Update value
 			tt.m.Update(tt.args.key, tt.args.value)
+
+			// Get value after updating
+			after := tt.m.Value(tt.args.key)
+
+			if after != tt.args.value || (before == tt.args.value && after == tt.args.value) {
+				t.Errorf("Update() = %v, want %v", after, tt.args.value)
+			}
 		})
 	}
 }
@@ -145,19 +156,19 @@ func TestMetadata_Has(t *testing.T) {
 	}{
 		{
 			name: "success - key exist",
-			m:    map[string]string{"key1": "value1"},
+			m:    Metadata{map[string]string{"key1": "value1"}},
 			args: args{key: "key1"},
 			want: true,
 		},
 		{
 			name: "success - key does not exist",
-			m:    map[string]string{"key1": "value1"},
+			m:    Metadata{map[string]string{"key1": "value1"}},
 			args: args{key: "key2"},
 			want: false,
 		},
 		{
 			name: "success - check in nil map",
-			m:    nil,
+			m:    Metadata{nil},
 			args: args{key: "key2"},
 			want: false,
 		},
@@ -183,13 +194,13 @@ func TestMetadata_Value(t *testing.T) {
 	}{
 		{
 			name: "success - get a value of the key",
-			m:    map[string]string{"key1": "value1"},
+			m:    Metadata{map[string]string{"key1": "value1"}},
 			args: args{key: "key1"},
 			want: "value1",
 		},
 		{
 			name: "success - get a value of the non existing key",
-			m:    map[string]string{"key1": "value1"},
+			m:    Metadata{map[string]string{"key1": "value1"}},
 			args: args{key: "key2"},
 			want: "",
 		},

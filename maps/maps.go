@@ -34,30 +34,42 @@ func (s StateMap) HasState(stateType string) bool {
 	return ok
 }
 
-type Metadata map[string]string
+type metadata map[string]string
+
+type Metadata struct {
+	metadata
+}
 
 func NewMetadata() Metadata {
-	return make(map[string]string)
+	return Metadata{make(map[string]string)}
 }
 
-func (m Metadata) Update(key, value string) {
-	if m == nil {
-		m = NewMetadata()
-	}
+func (m *Metadata) Update(key, value string) {
+	ensureMetadata(m)
 
-	m[key] = value
+	m.metadata[key] = value
 }
 
-func (m Metadata) Has(key string) bool {
-	_, ok := m[key]
+func (m *Metadata) Has(key string) bool {
+	ensureMetadata(m)
+
+	_, ok := m.metadata[key]
 
 	return ok
 }
 
-func (m Metadata) Value(key string) string {
+func (m *Metadata) Value(key string) string {
+	ensureMetadata(m)
+
 	if !m.Has(key) {
 		return ""
 	}
 
-	return m[key]
+	return m.metadata[key]
+}
+
+func ensureMetadata(m *Metadata) {
+	if m.metadata == nil {
+		m.metadata = make(map[string]string)
+	}
 }
